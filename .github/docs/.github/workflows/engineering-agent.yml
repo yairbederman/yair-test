@@ -1,0 +1,285 @@
+name: Engineering Agent - Auto Development
+
+on:
+  issues:
+    types: [labeled]
+  issue_comment:
+    types: [created]
+
+jobs:
+  engineering-agent:
+    if: |
+      (github.event_name == 'issues' && github.event.label.name == 'agent:implement') ||
+      (github.event_name == 'issue_comment' && contains(github.event.comment.body, '/engineering-agent'))
+    
+    runs-on: ubuntu-latest
+    
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+    
+    steps:
+      - name: Checkout yair-test repository
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      
+      - name: Checkout EngineeringAgency repository
+        uses: actions/checkout@v4
+        with:
+          repository: yairbederman/EngineeringAgency
+          path: EngineeringAgency
+          token: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Parse Issue for Task Details
+        id: parse_issue
+        run: |
+          ISSUE_NUMBER="${{ github.event.issue.number }}"
+          ISSUE_TITLE="${{ github.event.issue.title }}"
+          ISSUE_BODY="${{ github.event.issue.body }}"
+          
+          echo "issue_number=$ISSUE_NUMBER" >> $GITHUB_OUTPUT
+          echo "issue_title=$ISSUE_TITLE" >> $GITHUB_OUTPUT
+          
+          JIRA_KEY=$(echo "$ISSUE_BODY" | grep -oP '[A-Z]+-\d+' | head -1 || echo "")
+          
+          if [ -z "$JIRA_KEY" ]; then
+            echo "jira_key=ISSUE-$ISSUE_NUMBER" >> $GITHUB_OUTPUT
+            echo "branch_suffix=issue-$ISSUE_NUMBER" >> $GITHUB_OUTPUT
+          else
+            echo "jira_key=$JIRA_KEY" >> $GITHUB_OUTPUT
+            echo "branch_suffix=$JIRA_KEY" >> $GITHUB_OUTPUT
+          fi
+      
+      - name: Setup Agent Environment
+        run: |
+          echo "WORKSPACE_ROOT=$GITHUB_WORKSPACE" >> $GITHUB_ENV
+          echo "AGENT_ROOT=$GITHUB_WORKSPACE/EngineeringAgency/engineering" >> $GITHUB_ENV
+          echo "PROJECT_ROOT=$GITHUB_WORKSPACE" >> $GITHUB_ENV
+          
+          if [ ! -d "EngineeringAgency/engineering" ]; then
+            echo "❌ EngineeringAgency/engineering directory not found!"
+            exit 1
+          fi
+          
+          echo "✅ Agent environment configured:"
+          echo "  - Workspace: $GITHUB_WORKSPACE"
+          echo "  - Agent Root: $GITHUB_WORKSPACE/EngineeringAgency/engineering"
+          echo "  - Project: yairbederman/yair-test"
+      
+      - name: Create Feature Branch
+        id: branch
+        run: |
+          BRANCH_NAME="feature/${{ steps.parse_issue.outputs.branch_suffix }}-agent-implementation"
+          
+          git config user.name "Engineering Agent Bot"
+          git config user.email "agent@engineering.bot"
+          
+          git checkout -b "$BRANCH_NAME"
+          
+          echo "branch_name=$BRANCH_NAME" >> $GITHUB_OUTPUT
+          echo "✅ Created branch: $BRANCH_NAME"
+      
+      - name: Invoke Engineering Agent
+        id: agent
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          COPILOT_TOKEN: ${{ secrets.COPILOT_TOKEN }}
+          JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
+          ATLASSIAN_CLOUD_ID: ${{ secrets.ATLASSIAN_CLOUD_ID }}
+          CONFLUENCE_SPACE_KEY: ${{ secrets.CONFLUENCE_SPACE_KEY }}
+          FIGMA_TOKEN: ${{ secrets.FIGMA_TOKEN }}
+        run: |
+          chmod +x .github/scripts/invoke-agent.sh
+          
+          .github/scripts/invoke-agent.sh \
+            --task "${{ steps.parse_issue.outputs.issue_title }}" \
+            --jira-key "${{ steps.parse_issue.outputs.jira_key }}" \
+            --mode "implementation" \
+            --issue-number "${{ steps.parse_issue.outputs.issue_number }}"
+      
+      - name: Check for Changes
+        id: changes
+        run: |
+          if [ -n "$(git status --porcelain)" ]; then
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+            echo "✅ Changes detected by agent"
+          else
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+            echo "⚠️ No changes made by agent"
+          fi
+      
+      - name: Commit Changes
+        if: steps.changes.outputs.has_changes == 'true'
+        run: |
+          git add .
+          
+          cat > commit_message.txt <<EOF
+          feat(${{ steps.parse_issue.outputs.jira_key }}): ${{ steps.parse_issue.outputs.issue_title }}
+
+          Implemented by Engineering Agent
+
+          Issue: #${{ steps.parse_issue.outputs.issue_number }}
+          Jira: ${{ steps.parse_issue.outputs.jira_key }}
+          Mode: Implementation
+          Agent: EngineeringAgency v1.0
+
+          Co-authored-by: Engineering Agent Bot <agent@engineering.bot>
+          EOF
+          
+          git commit -F commit_message.txt
+          echo "✅ Changes committed"
+      
+      - name: Push Branch
+        if: steps.changes.outputs.has_changes == 'true'
+        run: |
+          git push origin ${{ steps.branch.outputs.branch_name }}
+          echo "✅ Branch pushed: ${{ steps.branch.outputs.branch_name }}"
+      
+      - name: Create Pull Request
+        if: steps.changes.outputs.has_changes == 'true'
+        id: create_pr
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          branch: ${{ steps.branch.outputs.branch_name }}
+          title: "feat(${{ steps.parse_issue.outputs.jira_key }}): ${{ steps.parse_issue.outputs.issue_title }}"
+          body: |
+            ## 🤖 Auto-generated by Engineering Agent
+            
+            **Jira Task**: ${{ steps.parse_issue.outputs.jira_key }}
+            **GitHub Issue**: Closes #${{ steps.parse_issue.outputs.issue_number }}
+            
+            ---
+            
+            ### 📋 Implementation Details
+            
+            This PR was automatically generated by the Engineering Agent following the patterns and specifications from the EngineeringAgency system.
+            
+            - [x] Code implemented following tech spec
+            - [ ] Unit tests added
+            - [ ] Integration tests passing
+            - [ ] Documentation updated
+            
+            ### 🔧 Agent Context
+            
+            - **Agent Mode**: Implementation
+            - **Pattern Source**: EngineeringAgency templates
+            - **Configuration**: Read from `.ai-instructions/` (if exists)
+            - **Architecture**: Following project-specific patterns
+            
+            ### ✅ Review Checklist
+            
+            - [ ] Code follows project patterns
+            - [ ] Tests cover acceptance criteria
+            - [ ] No security vulnerabilities
+            - [ ] Performance is acceptable
+            - [ ] Documentation is updated
+            - [ ] Breaking changes are documented
+            
+            ### 🔗 References
+            
+            - [EngineeringAgency Repo](https://github.com/yairbederman/EngineeringAgency)
+            - [Agent Workflow](.github/workflows/engineering-agent.yml)
+            - [Setup Documentation](.github/docs/engineering-agent-setup.md)
+            
+            ---
+            
+            **Need changes?** Comment on this PR or the original issue with additional instructions.
+          labels: |
+            agent-generated
+            needs-review
+      
+      - name: Update Issue - Success
+        if: steps.changes.outputs.has_changes == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.issues.createComment({
+              issue_number: ${{ steps.parse_issue.outputs.issue_number }},
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `🤖 **Engineering Agent - Implementation Complete**
+
+              ✅ I've successfully implemented the requested changes!
+
+              **Pull Request**: #${{ steps.create_pr.outputs.pull-request-number }}
+              **Branch**: \`${{ steps.branch.outputs.branch_name }}\`
+              **Jira Task**: ${{ steps.parse_issue.outputs.jira_key }}
+
+              ### 📝 Next Steps
+              1. Review the pull request
+              2. Run tests to verify implementation
+              3. Request changes if needed (I can iterate!)
+              4. Merge when ready
+
+              ### 🔄 Need Changes?
+              Comment on the PR or this issue with:
+              - \`/engineering-agent refactor [description]\`
+              - \`/engineering-agent fix [issue]\`
+              - \`/engineering-agent add [feature]\`
+
+              The agent will create additional commits on the same branch.`
+            });
+      
+      - name: Update Issue - No Changes
+        if: steps.changes.outputs.has_changes == 'false'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.issues.createComment({
+              issue_number: ${{ steps.parse_issue.outputs.issue_number }},
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `🤖 **Engineering Agent - No Changes Made**
+
+              ⚠️ The agent ran but did not make any code changes.
+
+              **Possible reasons:**
+              - Task requires manual clarification
+              - Missing required context (Jira spec, Figma links, etc.)
+              - Task is already implemented
+              - Agent configuration needs adjustment
+
+              ### 🔧 Troubleshooting
+              1. Check if Jira task **${{ steps.parse_issue.outputs.jira_key }}** exists and has a tech spec
+              2. Verify the issue description contains sufficient context
+              3. Check agent logs in the [workflow run](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
+
+              ### 💡 Need Help?
+              - Review the [setup documentation](.github/docs/engineering-agent-setup.md)
+              - Check [EngineeringAgency documentation](https://github.com/yairbederman/EngineeringAgency)
+              - Provide more context in this issue and re-trigger with \`/engineering-agent\``
+            });
+      
+      - name: Handle Errors
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.issues.createComment({
+              issue_number: ${{ steps.parse_issue.outputs.issue_number }},
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `🤖 **Engineering Agent - Error Occurred**
+
+              ❌ The agent encountered an error during execution.
+
+              **Error Details**: Check the [workflow run logs](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
+
+              ### 🔧 Common Issues
+              - Missing GitHub secrets (API keys, tokens)
+              - EngineeringAgency repository access issues
+              - Invalid Jira task reference
+              - Network or authentication problems
+
+              ### 📚 Resources
+              - [Setup Documentation](.github/docs/engineering-agent-setup.md)
+              - [Required Secrets Configuration](#required-secrets)
+              - [Troubleshooting Guide](https://github.com/yairbederman/EngineeringAgency/blob/master/readme/setup_instructions.md)
+
+              Please fix the issue and re-trigger by adding the \`agent:implement\` label or commenting \`/engineering-agent\`.`
+            });
