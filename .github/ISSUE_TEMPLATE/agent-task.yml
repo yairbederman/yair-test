@@ -1,0 +1,96 @@
+name: 🤖 Agent Implementation Task
+description: Assign a task to the Engineering Agent for automatic implementation
+title: "[AGENT] "
+labels: ["agent:implement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## 🤖 Engineering Agent Task
+        
+        Use this template to assign an implementation task to the Engineering Agent.
+        The agent will automatically create a feature branch, implement the code, and open a pull request.
+        
+        **Prerequisites:**
+        - Jira task with tech spec should exist (optional)
+        - Required secrets are configured in repository settings
+        - EngineeringAgency repository is accessible
+  
+  - type: input
+    id: jira_key
+    attributes:
+      label: Jira Task Key
+      description: The Jira task identifier (e.g., PROJ-123, WG3-456)
+      placeholder: "PROJ-123"
+    validations:
+      required: false
+  
+  - type: textarea
+    id: context
+    attributes:
+      label: Task Description
+      description: |
+        Describe what needs to be implemented. If a Jira task exists, provide the key above.
+        Otherwise, provide enough context for the agent to understand the requirements.
+      placeholder: |
+        Implement user authentication flow:
+        - Add login endpoint
+        - Create JWT token generation
+        - Add middleware for protected routes
+    validations:
+      required: true
+  
+  - type: dropdown
+    id: mode
+    attributes:
+      label: Agent Mode
+      description: Select the engineering agent mode
+      options:
+        - Implementation (default)
+        - BugFix
+        - Fast Track
+      default: 0
+    validations:
+      required: true
+  
+  - type: textarea
+    id: tech_spec_link
+    attributes:
+      label: Tech Spec / Documentation Links
+      description: Links to Jira, Confluence, Figma, or other relevant documentation
+      placeholder: |
+        - Jira: https://your-domain.atlassian.net/browse/PROJ-123
+        - Tech Spec: https://your-domain.atlassian.net/wiki/spaces/SPACE/pages/123456/Tech+Spec
+        - Figma: https://figma.com/file/...
+  
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Pre-flight Checklist
+      description: Verify these before submitting
+      options:
+        - label: Jira task exists with tech spec (or sufficient context provided above)
+          required: false
+        - label: Required GitHub secrets are configured
+          required: false
+        - label: I understand the agent will create a PR that requires review
+          required: true
+  
+  - type: markdown
+    attributes:
+      value: |
+        ---
+        
+        ### 🚀 What happens next?
+        
+        1. **Agent Triggered**: The Engineering Agent workflow starts automatically
+        2. **Context Loading**: Agent reads Jira, tech specs, and project patterns
+        3. **Implementation**: Code is generated following EngineeringAgency patterns
+        4. **PR Created**: A pull request is opened with the implementation
+        5. **Review**: You review and merge (or request changes)
+        
+        ### 📚 Resources
+        
+        - [Engineering Agent Setup](../.github/docs/engineering-agent-setup.md)
+        - [EngineeringAgency Documentation](https://github.com/yairbederman/EngineeringAgency)
+        - [Workflow Configuration](../.github/workflows/engineering-agent.yml)
