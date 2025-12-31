@@ -66,7 +66,7 @@ if [ -z "$AGENT_ROOT" ]; then
   exit 1
 fi
 
-if [ !  -d "$AGENT_ROOT" ]; then
+if [ ! -d "$AGENT_ROOT" ]; then
   echo -e "${RED}❌ Agent root directory not found: $AGENT_ROOT${NC}"
   exit 1
 fi
@@ -93,11 +93,11 @@ else
 fi
 
 # Check for project-specific AI instructions
-AI_INSTRUCTIONS_PATH="$PROJECT_ROOT/. ai-instructions"
+AI_INSTRUCTIONS_PATH="$PROJECT_ROOT/.ai-instructions"
 
 if [ -d "$AI_INSTRUCTIONS_PATH" ]; then
   echo -e "${GREEN}  ✓ Found .ai-instructions/ (project has been mapped)${NC}"
-  COPILOT_INSTRUCTIONS="$AI_INSTRUCTIONS_PATH/copilot-instructions. md"
+  COPILOT_INSTRUCTIONS="$AI_INSTRUCTIONS_PATH/copilot-instructions.md"
   
   if [ -f "$COPILOT_INSTRUCTIONS" ]; then
     echo -e "${GREEN}  ✓ Found copilot-instructions.md${NC}"
@@ -201,7 +201,7 @@ echo -e "${YELLOW}   Real AI integration not yet configured${NC}"
 echo ""
 
 # Create a sample file to show the agent "worked"
-SAMPLE_FILE="agent-implementation-$JIRA_KEY. md"
+SAMPLE_FILE="agent-implementation-$JIRA_KEY.md"
 
 cat > "$SAMPLE_FILE" <<EOF
 # Engineering Agent Implementation
