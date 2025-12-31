@@ -145,7 +145,7 @@ on:
 jobs:
   agent:
     if: |
-      (github.event_name == 'issues' && github.event.label.name == 'agent:implement') ||
+      (github.event_name == 'issues' && github.event.action == 'labeled' && github.event.label.name == 'agent:implement') ||
       (github.event_name == 'issues' && github.event.action == 'assigned' && 
        (github.event.assignee.login == 'github-actions[bot]' || 
         github.event.assignee.login == 'yairbederman')) ||
