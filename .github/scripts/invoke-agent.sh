@@ -201,8 +201,8 @@ echo -e "${YELLOW}   Real AI integration not yet configured${NC}"
 echo ""
 
 # Create a sample file to show the agent "worked"
-# Sanitize JIRA_KEY for use in filename (replace invalid characters with hyphens)
-SANITIZED_JIRA_KEY=$(echo "$JIRA_KEY" | tr -cs '[:alnum:]-' '-' | tr '[:upper:]' '[:lower:]')
+# Sanitize JIRA_KEY for use in filename (keep only alphanumeric and hyphens, convert to lowercase)
+SANITIZED_JIRA_KEY=$(echo "$JIRA_KEY" | tr -cd '[:alnum:]-' | tr '[:upper:]' '[:lower:]')
 SAMPLE_FILE="agent-implementation-${SANITIZED_JIRA_KEY}.md"
 
 cat > "$SAMPLE_FILE" <<EOF

@@ -10,7 +10,7 @@ jobs:
   engineering-agent:
     if: |
       (github.event_name == 'issues' && github.event.action == 'labeled' && github.event.label.name == 'agent:implement') ||
-      (github.event_name == 'issues' && github.event.action == 'assigned' && 
+      (github.event_name == 'issues' && github.event.action == 'assigned' && github.event.assignee != null &&
        (github.event.assignee.login == 'github-actions[bot]' || 
         github.event.assignee.login == 'yairbederman')) ||
       (github.event_name == 'issue_comment' && contains(github.event.comment.body, '/engineering-agent'))

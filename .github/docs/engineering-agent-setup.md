@@ -120,6 +120,13 @@ Assign an issue to `@github-actions[bot]` or `@yairbederman` to trigger the Engi
 - Clear indication of who/what is working on the issue
 - Works alongside existing team assignment practices
 
+**Customization:**
+To customize which users trigger the agent, modify the workflow condition in `.github/workflows/engineering-agent.yml` to include your desired usernames. For example:
+```yaml
+github.event.assignee.login == 'your-username' ||
+github.event.assignee.login == 'another-user'
+```
+
 ### Method 3: Trigger by Commenting
 
 Comment on any issue with `/engineering-agent` to trigger the agent. This is useful for re-triggering the agent or providing additional instructions.
@@ -146,7 +153,7 @@ jobs:
   agent:
     if: |
       (github.event_name == 'issues' && github.event.action == 'labeled' && github.event.label.name == 'agent:implement') ||
-      (github.event_name == 'issues' && github.event.action == 'assigned' && 
+      (github.event_name == 'issues' && github.event.action == 'assigned' && github.event.assignee != null &&
        (github.event.assignee.login == 'github-actions[bot]' || 
         github.event.assignee.login == 'yairbederman')) ||
       (github.event_name == 'issue_comment' && contains(github.event.comment.body, '/engineering-agent'))
