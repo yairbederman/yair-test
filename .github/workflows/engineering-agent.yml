@@ -9,7 +9,7 @@ on:
 jobs:
   engineering-agent:
     if: |
-      (github.event_name == 'issues' && github.event.label.name == 'agent:implement') ||
+      (github.event_name == 'issues' && github.event.action == 'labeled' && github.event.label.name == 'agent:implement') ||
       (github.event_name == 'issues' && github.event.action == 'assigned' && 
        (github.event.assignee.login == 'github-actions[bot]' || 
         github.event.assignee.login == 'yairbederman')) ||
@@ -250,7 +250,7 @@ jobs:
               ### 🔧 Troubleshooting
               1. Check if Jira task **${{ steps.parse_issue.outputs.jira_key }}** exists and has a tech spec
               2. Verify the issue description contains sufficient context
-              3. Check agent logs in the [workflow run](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
+              3. Check agent logs in the [workflow run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
 
               ### 💡 Need Help?
               - Review the [setup documentation](.github/docs/engineering-agent-setup.md)
@@ -271,7 +271,7 @@ jobs:
 
               ❌ The agent encountered an error during execution.
 
-              **Error Details**: Check the [workflow run logs](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
+              **Error Details**: Check the [workflow run logs](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
 
               ### 🔧 Common Issues
               - Missing GitHub secrets (API keys, tokens)
