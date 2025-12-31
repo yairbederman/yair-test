@@ -89,7 +89,47 @@ Configure the following secrets in your repository settings (`Settings` > `Secre
 
 ## Usage Methods
 
-### Method 1: GitHub Actions Workflow (Recommended)
+The Engineering Agent can be triggered in three ways:
+
+1. **Labeling an issue** with the `agent:implement` label
+2. **Assigning an issue** to `@github-actions[bot]` or `@yairbederman`
+3. **Commenting on an issue** with `/engineering-agent`
+
+### Method 1: Trigger by Labeling Issues
+
+Add the `agent:implement` label to any issue to trigger the Engineering Agent. This is useful for explicitly marking issues that should be handled by the agent.
+
+**Example:**
+1. Create or open an issue
+2. Add the label `agent:implement`
+3. The agent will automatically start working on the issue
+
+### Method 2: Trigger by Assigning Issues
+
+Assign an issue to `@github-actions[bot]` or `@yairbederman` to trigger the Engineering Agent. This provides a natural way to delegate work to the agent.
+
+**Example:**
+1. Create or open an issue
+2. Click on "Assignees" in the right sidebar
+3. Select `github-actions[bot]` or `yairbederman`
+4. The agent will automatically start working on the issue
+
+**Benefits of Assignment Trigger:**
+- More intuitive workflow for delegating tasks
+- Visible in issue tracking and project boards
+- Clear indication of who/what is working on the issue
+- Works alongside existing team assignment practices
+
+### Method 3: Trigger by Commenting
+
+Comment on any issue with `/engineering-agent` to trigger the agent. This is useful for re-triggering the agent or providing additional instructions.
+
+**Example:**
+1. Open an issue
+2. Add a comment with `/engineering-agent`
+3. The agent will process the issue
+
+### Method 4: GitHub Actions Workflow (Advanced)
 
 Create a workflow file at `.github/workflows/engineering-agent.yml`:
 
@@ -98,17 +138,19 @@ name: Engineering Agent
 
 on:
   issues:
-    types: [opened, labeled]
-  pull_request:
-    types: [opened, synchronize]
+    types: [labeled, assigned]
   issue_comment:
     types: [created]
-  schedule:
-    - cron: '0 0 * * *'  # Daily at midnight
-  workflow_dispatch:
 
 jobs:
   agent:
+    if: |
+      (github.event_name == 'issues' && github.event.label.name == 'agent:implement') ||
+      (github.event_name == 'issues' && github.event.action == 'assigned' && 
+       (github.event.assignee.login == 'github-actions[bot]' || 
+        github.event.assignee.login == 'yairbederman')) ||
+      (github.event_name == 'issue_comment' && contains(github.event.comment.body, '/engineering-agent'))
+    
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -132,7 +174,7 @@ jobs:
           config-path: '.github/agent-config.yml'
 ```
 
-### Method 2: Manual Trigger via Workflow Dispatch
+### Method 5: Manual Trigger via Workflow Dispatch
 
 Manually trigger the agent from the Actions tab:
 
@@ -142,7 +184,7 @@ Manually trigger the agent from the Actions tab:
 4. Select branch and configure parameters
 5. Click `Run workflow` button
 
-### Method 3: CLI Tool (Local Development)
+### Method 6: CLI Tool (Local Development)
 
 Install and run the agent locally:
 
@@ -163,7 +205,7 @@ engineering-agent create-pr --from feature --to main --title "New feature"
 engineering-agent triage-issues --label "needs-triage"
 ```
 
-### Method 4: API Integration
+### Method 7: API Integration
 
 Integrate the agent via REST API:
 
